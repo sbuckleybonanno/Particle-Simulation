@@ -102,11 +102,11 @@ Particle.prototype.draw = function () {
     }
   };
 
-  var controls, n, i, particle;
+  var controls, gui, n, i, particle;
 
   function initGUI () {
     controls = new Controls();
-    var gui = new dat.GUI();
+    gui = new dat.GUI();
     var qualities = gui.addFolder("Qualities");
     qualities.add(controls, "radius", 0.1, 30).name("Radius").onFinishChange(function () {
       particleRadius = controls.radius;

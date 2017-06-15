@@ -4,7 +4,11 @@ body {
     background: #000;
 }
 
-canvas {
-    /*-webkit-filter: url("#turbulence");*/
-    /*filter: url("#turbulence");*/
-}
+/*#gui {
+  position: absolute;
+}*/
+
+/*canvas {
+    -webkit-filter: url("#turbulence");
+    filter: url("#turbulence");
+}*/
