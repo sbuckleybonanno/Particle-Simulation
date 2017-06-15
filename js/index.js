@@ -212,7 +212,6 @@ Particle.prototype.draw = function () {
   function handleClick (event) {
     // var particle = new Particle(event.clientX, event.clientY);
     // particles.push(particle);
-
     mouseDown = true;
   }
   function handleMove (event) {
@@ -223,11 +222,28 @@ Particle.prototype.draw = function () {
     mouseDown = false;
   }
 
+  function handleTouchStart(event) {
+    mouseX = event.touches[0].pageX;
+    mouseY = event.touches[1].pageY;
+    mouseDown = true;
+  }
+  function handleTouchMove(event) {
+    mouseX = event.touches[0].pageX;
+    mouseY = event.touches[1].pageY;
+  }
+  function handleTouchEnd(event) {
+    mouseDown = false;
+  }
+
   window.addEventListener("resize", resize);
 
   c.addEventListener("mousedown", handleClick, false);
   c.addEventListener("mousemove", handleMove, false);
   c.addEventListener("mouseup", handleUp, false);
+
+  c.addEventListener('touchstart', handleTouchStart, false);
+  c.addEventListener('touchmove', handleTouchMove, false);
+  c.addEventListener('touchend', handleTouchEnd, false);
 
   initGUI();
   resize();
