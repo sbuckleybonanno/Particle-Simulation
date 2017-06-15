@@ -104,8 +104,7 @@ Particle.prototype.draw = function () {
 
   var controls, n, i, particle;
 
-  function init () {
-    // GUI
+  function initGUI () {
     controls = new Controls();
     var gui = new dat.GUI();
     var qualities = gui.addFolder("Qualities");
@@ -131,7 +130,6 @@ Particle.prototype.draw = function () {
   function resize () {
     screenWidth = c.width = window.innerWidth;
     screenHeight = c.height = window.innerHeight;
-    init();
   }
 
   function draw () {
@@ -165,7 +163,7 @@ Particle.prototype.draw = function () {
       // Collision detection with other particles:
       for (j = 0 ; j < len ; j++) {
         particle2 = particles[j];
-        min_distance = (particle1.radius + particle2.radius) // * 0.8; // The 0.8 is to reduce the hitbox square to be smaller than the rendered circle image, so that circles that don't visually touch don't reflect off of invisible hitboxes. 
+        min_distance = (particle1.radius + particle2.radius) // * 0.8; // The 0.8 is to reduce the hitbox square to be smaller than the rendered circle image, so that circles that don't visually touch don't reflect off of invisible hitboxes.
         if (particle1 !== particle2 && Math.abs(particle2.x - particle1.x) < min_distance && Math.abs(particle2.y - particle1.y) < min_distance) {
           possible_x_bounds = [particle1.x-particle1.radius, particle1.x+particle1.radius, particle2.x-particle2.radius, particle2.x+particle2.radius];
           min_x = Math.min(...possible_x_bounds);
@@ -231,6 +229,7 @@ Particle.prototype.draw = function () {
   c.addEventListener("mousemove", handleMove, false);
   c.addEventListener("mouseup", handleUp, false);
 
+  initGUI();
   resize();
   draw();
 
