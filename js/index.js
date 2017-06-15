@@ -223,13 +223,15 @@ Particle.prototype.draw = function () {
   }
 
   function handleTouchStart(event) {
+    event.preventDefault();
     mouseX = event.touches[0].pageX;
-    mouseY = event.touches[1].pageY;
+    mouseY = event.touches[0].pageY;
     mouseDown = true;
   }
   function handleTouchMove(event) {
+    event.preventDefault();
     mouseX = event.touches[0].pageX;
-    mouseY = event.touches[1].pageY;
+    mouseY = event.touches[0].pageY;
   }
   function handleTouchEnd(event) {
     mouseDown = false;
