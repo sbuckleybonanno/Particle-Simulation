@@ -6,6 +6,8 @@ var c = document.querySelector('canvas'),
 		particleRadius = 10,
     averageSpeed = 4,
     friction = 0.9,
+    cohesion = 0.0,
+    cohesionMinDistance = 100,
     colorChangeSpeed = 0.04,
     backgroundColor = "rgba(0, 0, 0, 0.2)",
     startingColor = {
@@ -79,6 +81,7 @@ Particle.prototype.draw = function () {
     }
     this.selectedColor = [255, 255, 255];
     this.friction = 1.0-friction;
+    this.cohesion = 0.5;
     this.radius = particleRadius;
     this.particleCount = 0;
     this.addParticles = function () {
@@ -93,15 +96,13 @@ Particle.prototype.draw = function () {
           particles.push(particle);
         }
       }
-    };
+    }
     this.removeParticles = function () {
       var n = particles.length * 0.2;
       for (i = 0 ; i < n ; i++) {
         particles.pop();
       }
-    };
-    // this.speed = 0.5;
-    // this.particles = particles.length;
+    }
   };
 
   var controls, gui, n, i, particle;
@@ -116,20 +117,20 @@ Particle.prototype.draw = function () {
     qualities.add(controls, "friction", -0.1, 1.0).name("Viscosity").onChange(function () {
       friction = 1.0 - controls.friction;
     });
+    qualities.add(controls, "cohesion", -10, 10).name("Cohesion").listen().onChange(function () {
+      cohesion = controls.cohesion * 0.1;
+    });
     qualities.addColor(controls, "selectedColor").name("Color").onFinishChange(function () {
       selectedColor.r = controls.selectedColor[0];
       selectedColor.g = controls.selectedColor[1];
       selectedColor.b = controls.selectedColor[2];
     });
-
+    controls.cohesion = 0.0;
     var quantities = gui.addFolder("Quantities");
     quantities.add(controls, "addParticles").name("Add");
     quantities.add(controls, "removeParticles").name("Remove");
     quantities.add(controls, "reset").name("Reset");
 
-    // var info = gui.addFolder("Info");
-    // info.add(controls, "speed").name("Average Speed").listen();
-    // info.add(controls, "particles").name("Particles").listen();
   }
 
   function resize () {
@@ -160,13 +161,32 @@ Particle.prototype.draw = function () {
       controls.particleCount++;
     }
 
-    var particle1, particle2, i, j, len, min_distance, overlap, possible_x_bounds, possible_y_bounds, min_x, max_x, min_y, max_y; // , speed;
+    var particle1, particle2, i, j, len, min_distance, overlap, possible_x_bounds, possible_y_bounds, min_x, max_x, min_y, max_y, x_coh, y_coh, diagonal;
 
     for (i = 0, len = particles.length; i < len ; i++) {
       particle1 = particles[i];
 
       for (j = 0 ; j < len ; j++) {
         particle2 = particles[j];
+
+        // Cohesion:
+
+        x_coh = particle1.x - particle2.x;
+        y_coh = particle1.y - particle2.y;
+        // normalize
+        if (x_coh !== 0 && y_coh !== 0) {
+          diagonal = Math.sqrt(x_coh*x_coh + y_coh*y_coh);
+          if (diagonal < cohesionMinDistance) {
+            x_coh /= (diagonal*diagonal);
+            // x_coh = 1.0 / (diagonal*diagonal)
+            y_coh /= (diagonal*diagonal);
+            // scale
+            x_coh *= cohesion; // For now I'm saying that every particle possesses equal attraction. The alternative is for attraction to be based on radius, similar to gravity.
+            y_coh *= cohesion;
+            particle1.dx += -x_coh;
+            particle1.dy += -y_coh;
+          }
+        }
 
         // Collision detection with other particles:
 
@@ -211,27 +231,14 @@ Particle.prototype.draw = function () {
       particle1.color.r += ( particle1.targetColor.r - particle1.color.r ) * colorChangeSpeed;
 			particle1.color.g += ( particle1.targetColor.g - particle1.color.g ) * colorChangeSpeed;
 			particle1.color.b += ( particle1.targetColor.b - particle1.color.b ) * colorChangeSpeed;
-
     }
-
-    // speed = 0;
-    // for (i = 0, len = particles.length; i < len ; i++) {
-    //   particle1 = particles[i];
-    //   speed += Math.sqrt(particle1.dx*particle1.dx + particle1.dy*particle1.dy);
-    // }
-    // if (particles.length > 0) {
-    //   controls.speed = speed/particles.length;
-    // }
-    // else {
-    //   controls.speed = 0;
-    // }
-    //
-    // controls.particles = particles.length;
   }
 
   // Event handlers:
 
   function handleClick (event) {
+    // var particle = new Particle(event.clientX, event.clientY);
+    // particles.push(particle);
     mouseDown = true;
   }
   function handleMove (event) {
