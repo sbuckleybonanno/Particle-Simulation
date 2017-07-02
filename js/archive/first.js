@@ -1,3 +1,9 @@
+/*
+
+  This is the first fully working index.js file of this project. It includes the basic particles simulation and nothing more. The code here still forms the backbone of the final product. 
+
+*/
+
 var c = document.querySelector('canvas'),
     ctx = c.getContext('2d'),
     screenWidth = 0,
