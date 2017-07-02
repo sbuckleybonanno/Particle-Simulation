@@ -7,7 +7,7 @@ var c = document.querySelector('canvas'),
     averageSpeed = 4,
     friction = 0.9,
     colorChangeSpeed = 0.04,
-    backgroundColor = "rgba(0, 0, 0, 0.2)",
+    backgroundColor = "rgba(0, 0, 0, 0.1)",
     startingColor = {
       r: 100,
       g: 100,
@@ -18,6 +18,10 @@ var c = document.querySelector('canvas'),
       g: 255,
       b: 255
     },
+    appearance = "particles",
+    voronoi = new Voronoi(),
+    fenetre = {xl: 0, xr: window.innerWidth, yt: 0, yb: window.innerHeight}
+    diagram = null,
     particles = [];
 
 var mouseDown = false,
@@ -34,10 +38,6 @@ window.requestAnimFrame = (function () {
                window.setTimeout(callback, 1000/60);
            };
 })();
-
-// function distance (x1, y1, x2, y2) {
-//     return Math.sqrt(Math.pow(x1-x2, 2) + Math.pow(y1-y2, 2));
-// }
 
 function Particle (x, y) {
     this.x = x;
@@ -58,15 +58,27 @@ function Particle (x, y) {
 }
 
 Particle.prototype.draw = function () {
-  // var grd;
+  var rgb;
+  rgb = Math.round(this.color.r)+','+Math.round(this.color.g)+','+Math.round(this.color.b);
   ctx.save();
-  // grd = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, this.radius);
-  // grd.addColorStop(1, 'rgba('+Math.round(this.color.r)+','+Math.round(this.color.g)+','+Math.round(this.color.b)+',1.0)');
-  // grd.addColorStop(0, "rgba(0, 0, 0, 0)");
   ctx.beginPath();
-  ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2, false);
-  ctx.fillStyle = 'rgba('+Math.round(this.color.r)+','+Math.round(this.color.g)+','+Math.round(this.color.b)+',1.0)';
-  // ctx.fillStyle = grd;
+  if (appearance === "particles") {
+    ctx.fillStyle = 'rgba('+rgb+',1.0)';
+    ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2, false);
+  }
+  else if (appearance === "glass") {
+    ctx.fillStyle = 'rgba('+rgb+',0.1)';
+    // ctx.arc(this.x, this.y, this.radius*2, 0, Math.PI * 2, false);
+    ctx.fillRect(this.x-(this.radius*2), this.y-(this.radius*2), this.radius*4, this.radius*4);
+  }
+  // else if (appearance === "hazy") {
+  //   var grd = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, this.radius*4);
+  //   grd.addColorStop(0, 'rgba('+rgb+',1.0)');
+  //   grd.addColorStop(1, 'rgba('+rgb+',0)');
+  //   ctx.arc(this.x, this.y, this.radius*4, 0, Math.PI * 2, false);
+  //   ctx.fillStyle = grd;
+  // }
+
   ctx.fill();
   ctx.restore();
 };
@@ -100,8 +112,18 @@ Particle.prototype.draw = function () {
         particles.pop();
       }
     };
-    // this.speed = 0.5;
-    // this.particles = particles.length;
+    this.particlesAppearance = function () {
+      appearance = "particles";
+    };
+    this.mosaicAppearance = function () {
+      appearance = "glass";
+    };
+    this.geometricAppearance = function () {
+      appearance = "geometric";
+    }
+
+  // this.speed = 0.5;
+  // this.particles = particles.length;
   };
 
   var controls, gui, n, i, particle;
@@ -109,43 +131,113 @@ Particle.prototype.draw = function () {
   function initGUI () {
     controls = new Controls();
     gui = new dat.GUI();
-    var qualities = gui.addFolder("Qualities");
-    qualities.add(controls, "radius", 0.1, 30).name("Radius").onFinishChange(function () {
+    var qualitiesFolder = gui.addFolder("Qualities");
+    qualitiesFolder.add(controls, "radius", 0.1, 30).name("Radius").onFinishChange(function () {
       particleRadius = controls.radius;
     });
-    qualities.add(controls, "friction", -0.1, 1.0).name("Viscosity").onChange(function () {
+    qualitiesFolder.add(controls, "friction", -0.1, 1.0).name("Viscosity").onChange(function () {
       friction = 1.0 - controls.friction;
     });
-    qualities.addColor(controls, "selectedColor").name("Color").onFinishChange(function () {
+    qualitiesFolder.addColor(controls, "selectedColor").name("Color").onFinishChange(function () {
       selectedColor.r = controls.selectedColor[0];
       selectedColor.g = controls.selectedColor[1];
       selectedColor.b = controls.selectedColor[2];
     });
 
-    var quantities = gui.addFolder("Quantities");
-    quantities.add(controls, "addParticles").name("Add");
-    quantities.add(controls, "removeParticles").name("Remove");
-    quantities.add(controls, "reset").name("Reset");
+    var quantitiesFolder = gui.addFolder("Quantities");
+    quantitiesFolder.add(controls, "addParticles").name("Add");
+    quantitiesFolder.add(controls, "removeParticles").name("Remove");
+    quantitiesFolder.add(controls, "reset").name("Reset");
 
-    // var info = gui.addFolder("Info");
-    // info.add(controls, "speed").name("Average Speed").listen();
-    // info.add(controls, "particles").name("Particles").listen();
+    var appearanceFolder = gui.addFolder("Appearance");
+    appearanceFolder.add(controls, "particlesAppearance").name("Particles");
+    appearanceFolder.add(controls, "mosaicAppearance").name("Mosaic");
+    appearanceFolder.add(controls, "geometricAppearance").name("Geometric");
   }
+
+  //   var info = gui.addFolder("Info");
+  //   // info.add(controls, "speed").name("Average Speed").listen();
+  //   info.add(controls, "particles").name("Particles").listen();
+  // }
 
   function resize () {
     screenWidth = c.width = window.innerWidth;
     screenHeight = c.height = window.innerHeight;
+    fenetre = {xl: 0, xr: window.innerWidth, yt: 0, yb: window.innerHeight}
   }
 
   function draw () {
-    ctx.save();
-    ctx.fillStyle = backgroundColor;
-		ctx.fillRect(0, 0, screenWidth, screenHeight);
+    if (appearance !== "geometric" || particles.length === 0) {
+      ctx.save();
+      ctx.fillStyle = backgroundColor;
+  		ctx.fillRect(0, 0, screenWidth, screenHeight);
+      ctx.restore();
+    }
 
     update();
 
-    for (var i = 0, len = particles.length ; i < len ; i++) {
-      particles[i].draw();
+    if (appearance === "geometric") {
+      // voronoi
+      voronoi.recycle(diagram);
+      diagram = voronoi.compute(particles, fenetre);
+  		if (!this.diagram) {return;}
+
+      ctx.save();
+      //cells
+      if (diagram.cells.length === 1) {
+        var particle = particles[0];
+        ctx.fillStyle = 'rgba('+Math.round(particle.color.r)+','+Math.round(particle.color.g)+','+Math.round(particle.color.b)+',0.3)';
+        ctx.fillRect(0, 0, screenWidth, screenHeight);
+      }
+
+      for (var i = 0 ; i < diagram.cells.length ; i++) {
+        var cell = diagram.cells[i];
+        var halfedges = cell.halfedges,
+  				nHalfedges = halfedges.length;
+  			if (nHalfedges > 2) {
+  				v = halfedges[0].getStartpoint();
+  				ctx.beginPath();
+  				ctx.moveTo(v.x,v.y);
+  				for (var iHalfedge=0; iHalfedge<nHalfedges; iHalfedge++) {
+  					v = halfedges[iHalfedge].getEndpoint();
+  					ctx.lineTo(v.x,v.y);
+  					}
+          ctx.closePath();
+  				ctx.fillStyle = 'rgba('+Math.round(cell.site.color.r)+','+Math.round(cell.site.color.g)+','+Math.round(cell.site.color.b)+',0.3)';
+  				ctx.fill();
+  			}
+      }
+
+      // edges
+  		ctx.strokeStyle = 'rgb(0, 0, 0)';
+      // ctx.lineWidth = 0.2;
+  		var edges = this.diagram.edges,
+  			iEdge = edges.length,
+  			edge, v, rStrokeStyle, gStockStyle, bStockStyle;
+  		while (iEdge--) {
+        ctx.beginPath();
+  			edge = edges[iEdge];
+  			v = edge.va;
+  			ctx.moveTo(v.x,v.y);
+  			v = edge.vb;
+  			ctx.lineTo(v.x,v.y);
+        // rStrokeStyle = edge.lSite.color.r;
+        // gStrokeStyle = edge.lSite.color.g;
+        // bStrokeStyle = edge.lSite.color.b;
+        // if (edge.rSite) {
+        //   rStrokeStyle = (rStrokeStyle+edge.rSite.color.r)/2;
+        //   gStrokeStyle = (gStrokeStyle+edge.rSite.color.g)/2;
+        //   bStrokeStyle = (bStrokeStyle+edge.rSite.color.b)/2;
+        // }
+        // ctx.strokeStyle = 'rgb('+Math.round(rStrokeStyle)+','+Math.round(gStrokeStyle)+','+Math.round(bStrokeStyle)+')';
+        ctx.stroke();
+  		}
+      ctx.restore();
+    }
+    else {
+      for (var i = 0, len = particles.length ; i < len ; i++) {
+        particles[i].draw();
+      }
     }
 
     window.requestAnimFrame(draw);
