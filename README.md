@@ -1,4 +1,6 @@
 # Particle-Simulation
-An experiment with particles and colors. Work-in-progress, and inspired by http://lab.hakim.se/bacterium/01/
+An experiment with particles and colors, which you can try out [here](https://sbuckleybonanno.github.io/Particle-Simulation/). 
 
-Try out the simulation itself [here](https://sbuckleybonanno.github.io/Particle-Simulation/).
+Inspired by http://lab.hakim.se/bacterium/01/, and made possible thanks to [this](https://github.com/gorhill/Javascript-Voronoi) implementation of [Fortune's algorithm](https://en.wikipedia.org/wiki/Fortune%27s_algorithm). 
+
+
