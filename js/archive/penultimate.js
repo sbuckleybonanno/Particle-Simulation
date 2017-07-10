@@ -1,3 +1,9 @@
+/*
+
+  Here is the code for the "wave" filter, which proved to simple be too uninteresting, and not sufficiently different from the "mosaic" (formerly "geometric") filter. Additionally, waves were too often not properly illustrated by the rendering scheme, as the image often looked just plain chaotic. 
+
+*/
+
 var c = document.querySelector('canvas'),
     ctx = c.getContext('2d'),
     screenWidth = 0,
@@ -40,21 +46,22 @@ window.requestAnimFrame = (function () {
 })();
 
 function Particle (x, y) {
-    this.x = x;
-    this.y = y;
-    this.dx = (Math.random()*averageSpeed)-(averageSpeed/2);
-    this.dy = (Math.random()*averageSpeed)-(averageSpeed/2);
-    this.color = {
-      r: startingColor.r,
-      g: startingColor.g,
-      b: startingColor.b
-    };
-    this.targetColor = {
-      r: selectedColor.r,
-      g: selectedColor.g,
-      b: selectedColor.b
-    };
-    this.radius = particleRadius;
+  this.x = x;
+  this.y = y;
+  this.dx = (Math.random()*averageSpeed)-(averageSpeed/2);
+  this.dy = (Math.random()*averageSpeed)-(averageSpeed/2);
+  this.color = {
+    r: startingColor.r,
+    g: startingColor.g,
+    b: startingColor.b
+  };
+  this.targetColor = {
+    r: selectedColor.r,
+    g: selectedColor.g,
+    b: selectedColor.b
+  };
+  this.radius = particleRadius;
+  this.justCollided = false;
 }
 
 Particle.prototype.draw = function () {
@@ -103,8 +110,11 @@ Particle.prototype.draw = function () {
     this.particlesAppearance = function () {
       appearance = "particles";
     };
-    this.geometricAppearance = function () {
-      appearance = "geometric";
+    this.mosaicAppearance = function () {
+      appearance = "mosaic";
+    };
+    this.waveAppearance = function () {
+      appearance = "wave";
     }
 
   // this.speed = 0.5;
@@ -136,7 +146,8 @@ Particle.prototype.draw = function () {
 
     var appearanceFolder = gui.addFolder("Appearance");
     appearanceFolder.add(controls, "particlesAppearance").name("Particles");
-    appearanceFolder.add(controls, "geometricAppearance").name("Geometric");
+    appearanceFolder.add(controls, "mosaicAppearance").name("Mosaic");
+    appearanceFolder.add(controls, "waveAppearance").name("Wave");
   }
 
   //   var info = gui.addFolder("Info");
@@ -151,7 +162,7 @@ Particle.prototype.draw = function () {
   }
 
   function draw () {
-    if (appearance !== "geometric" || particles.length === 0) {
+    if ((appearance !== "mosaic" && appearance !== "wave") || particles.length === 0) {
       ctx.save();
       ctx.fillStyle = backgroundColor;
   		ctx.fillRect(0, 0, screenWidth, screenHeight);
@@ -160,56 +171,162 @@ Particle.prototype.draw = function () {
 
     update();
 
-    if (appearance === "geometric") {
+    if (appearance === "mosaic" || appearance === "wave") {
       // voronoi
       voronoi.recycle(diagram);
       diagram = voronoi.compute(particles, fenetre);
   		if (!this.diagram) {return;}
 
       ctx.save();
-      //cells
-      if (diagram.cells.length === 1) {
-        var particle = particles[0];
-        ctx.fillStyle = 'rgba('+Math.round(particle.color.r)+','+Math.round(particle.color.g)+','+Math.round(particle.color.b)+',0.3)';
-        ctx.fillRect(0, 0, screenWidth, screenHeight);
+
+      if (appearance === "mosaic") {
+        //cells
+        if (diagram.cells.length === 1) {
+          var particle = particles[0];
+          ctx.fillStyle = 'rgba('+Math.round(particle.color.r)+','+Math.round(particle.color.g)+','+Math.round(particle.color.b)+',0.3)';
+          ctx.fillRect(0, 0, screenWidth, screenHeight);
+        }
+
+        for (var i = 0 ; i < diagram.cells.length ; i++) {
+          var cell = diagram.cells[i];
+          var halfedges = cell.halfedges,
+    				nHalfedges = halfedges.length;
+    			if (nHalfedges > 2) {
+    				v = halfedges[0].getStartpoint();
+    				ctx.beginPath();
+    				ctx.moveTo(v.x,v.y);
+    				for (var iHalfedge=0; iHalfedge<nHalfedges; iHalfedge++) {
+    					v = halfedges[iHalfedge].getEndpoint();
+    					ctx.lineTo(v.x,v.y);
+    					}
+            ctx.closePath();
+    				ctx.fillStyle = 'rgba('+Math.round(cell.site.color.r)+','+Math.round(cell.site.color.g)+','+Math.round(cell.site.color.b)+',0.3)';
+    				ctx.fill();
+    			}
+        }
+
+        // edges
+    		ctx.strokeStyle = 'rgb(0, 0, 0)';
+        // ctx.lineWidth = 0.2;
+    		var edges = this.diagram.edges,
+    			iEdge = edges.length,
+    			edge, v, rStrokeStyle, gStockStyle, bStockStyle;
+    		while (iEdge--) {
+          ctx.beginPath();
+    			edge = edges[iEdge];
+    			v = edge.va;
+    			ctx.moveTo(v.x,v.y);
+    			v = edge.vb;
+    			ctx.lineTo(v.x,v.y);
+          ctx.stroke();
+    		}
       }
 
-      for (var i = 0 ; i < diagram.cells.length ; i++) {
-        var cell = diagram.cells[i];
-        var halfedges = cell.halfedges,
-  				nHalfedges = halfedges.length;
-  			if (nHalfedges > 2) {
-  				v = halfedges[0].getStartpoint();
-  				ctx.beginPath();
-  				ctx.moveTo(v.x,v.y);
-  				for (var iHalfedge=0; iHalfedge<nHalfedges; iHalfedge++) {
-  					v = halfedges[iHalfedge].getEndpoint();
-  					ctx.lineTo(v.x,v.y);
-  					}
-          ctx.closePath();
-  				ctx.fillStyle = 'rgba('+Math.round(cell.site.color.r)+','+Math.round(cell.site.color.g)+','+Math.round(cell.site.color.b)+',0.3)';
-  				ctx.fill();
-  			}
+      else { // if the appearance is "wave"
+        var particle, i, len, maxSpeed, speed;
+        maxSpeed = 0;
+        for (i = 0, len = particles.length; i < len ; i++) {
+          particle = particles[i];
+          speed = Math.sqrt(particle.dx*particle.dx + particle.dy*particle.dy);
+          if (speed > maxSpeed) {
+            maxSpeed = speed
+          }
+        }
+        for (i = 0, len = particles.length; i < len ; i++) {
+          particle = particles[i];
+          speed = Math.sqrt(particle.dx*particle.dx + particle.dy*particle.dy);
+        //   particle.color.r = ((255-particle.targetColor.r) * (speed/maxSpeed)) + (particle.targetColor.r);
+        //   particle.color.g = ((255-particle.targetColor.g) * (speed/maxSpeed)) + (particle.targetColor.g);
+        //   particle.color.b = ((255-particle.targetColor.b) * (speed/maxSpeed)) + (particle.targetColor.b);
       }
 
-      // edges
-  		ctx.strokeStyle = 'rgb(0, 0, 0)';
-      // ctx.lineWidth = 0.2;
-  		var edges = this.diagram.edges,
-  			iEdge = edges.length,
-  			edge, v, rStrokeStyle, gStockStyle, bStockStyle;
-  		while (iEdge--) {
-        ctx.beginPath();
-  			edge = edges[iEdge];
-  			v = edge.va;
-  			ctx.moveTo(v.x,v.y);
-  			v = edge.vb;
-  			ctx.lineTo(v.x,v.y);
-        ctx.stroke();
-  		}
+        //cells
+        if (diagram.cells.length === 1) {
+          var particle = particles[0];
+          ctx.fillStyle = 'rgba('+Math.round(particle.color.r)+','+Math.round(particle.color.g)+','+Math.round(particle.color.b)+',0.3)';
+          ctx.fillRect(0, 0, screenWidth, screenHeight);
+        }
+
+        for (var i = 0 ; i < diagram.cells.length ; i++) {
+          var cell = diagram.cells[i];
+          var halfedges = cell.halfedges,
+    				nHalfedges = halfedges.length;
+    			if (nHalfedges > 2) {
+    				v = halfedges[0].getStartpoint();
+    				ctx.beginPath();
+    				ctx.moveTo(v.x,v.y);
+    				for (var iHalfedge=0; iHalfedge<nHalfedges; iHalfedge++) {
+    					v = halfedges[iHalfedge].getEndpoint();
+    					ctx.lineTo(v.x,v.y);
+    					}
+            ctx.closePath();
+    				ctx.fillStyle = 'rgba('+Math.round(cell.site.color.r)+','+Math.round(cell.site.color.g)+','+Math.round(cell.site.color.b)+',0.3)';
+    				ctx.fill();
+    			}
+        }
+
+        // edges
+        // var strokeR, strokeG, strokeB;
+        // if (cell.site.color.r+cell.site.color.g+cell.site.color.b < 382) {
+        //   strokeR = (255-cell.site.color.r)*0.5 + cell.site.color.r;
+        //   strokeG = (255-cell.site.color.g)*0.5 + cell.site.color.g;
+        //   strokeB = (255-cell.site.color.b)*0.5 + cell.site.color.b;
+        //   strokeR = cell.site.color.r * 0.5;
+        //   strokeG = cell.site.color.g * 0.5;
+        //   strokeB = cell.site.color.b * 0.5;
+        // }
+        // else {
+        //   strokeR = cell.site.color.r * 0.5;
+        //   strokeG = cell.site.color.g * 0.5;
+        //   strokeB = cell.site.color.b * 0.5;
+        // }
+
+    		// ctx.strokeStyle = 'rgb(0, 0, 0)';
+        // ctx.lineWidth = 0.2;
+
+    		var edges = this.diagram.edges,
+    			iEdge = edges.length,
+    			edge, v, rStrokeStyle, gStockStyle, bStockStyle;
+    		while (iEdge--) {
+          ctx.beginPath();
+    			edge = edges[iEdge];
+    			v = edge.va;
+    			ctx.moveTo(v.x,v.y);
+    			v = edge.vb;
+    			ctx.lineTo(v.x,v.y);
+
+          rStrokeStyle = edge.lSite.color.r;
+          gStrokeStyle = edge.lSite.color.g;
+          bStrokeStyle = edge.lSite.color.b;
+          if (edge.rSite) {
+            rStrokeStyle = (rStrokeStyle+edge.rSite.color.r)/2;
+            gStrokeStyle = (gStrokeStyle+edge.rSite.color.g)/2;
+            bStrokeStyle = (bStrokeStyle+edge.rSite.color.b)/2;
+          }
+
+          // rStrokeStyle = Math.abs(127-rStrokeStyle);
+          // gStrokeStyle = Math.abs(127-gStrokeStyle);
+          // bStrokeStyle = Math.abs(127-bStrokeStyle);
+          if (rStrokeStyle+gStrokeStyle+bStrokeStyle < 382) {
+            rStrokeStyle = (255-rStrokeStyle)*0.5 + rStrokeStyle;
+            gStrokeStyle = (255-gStrokeStyle)*0.5 + gStrokeStyle;
+            bStrokeStyle = (255-bStrokeStyle)*0.5 + bStrokeStyle;
+          }
+          else {
+            rStrokeStyle = rStrokeStyle * 0.5;
+            gStrokeStyle = gStrokeStyle * 0.5;
+            bStrokeStyle = bStrokeStyle * 0.5;
+          }
+
+          ctx.strokeStyle = 'rgb('+Math.round(rStrokeStyle)+','+Math.round(gStrokeStyle)+','+Math.round(bStrokeStyle)+')';
+
+          ctx.stroke();
+    		}
+      }
+
       ctx.restore();
     }
-    else {
+    else { // if the appearance is "particles"
       for (var i = 0, len = particles.length ; i < len ; i++) {
         particles[i].draw();
       }
@@ -239,6 +356,14 @@ Particle.prototype.draw = function () {
 
         min_distance = (particle1.radius + particle2.radius);
         if (particle1 !== particle2 && Math.abs(particle2.x - particle1.x) < min_distance && Math.abs(particle2.y - particle1.y) < min_distance) {
+
+          if (appearance === "wave" && particle1.justCollided === false) {
+            particle1.color.r = (255-particle.targetColor.r)*0.5 + (particle.targetColor.r);
+            particle1.color.g = (255-particle.targetColor.g)*0.5 + (particle.targetColor.g);
+            particle1.color.b = (255-particle.targetColor.b)*0.5 + (particle.targetColor.b);
+          }
+          particle1.justCollided = true;
+
           possible_x_bounds = [particle1.x-particle1.radius, particle1.x+particle1.radius, particle2.x-particle2.radius, particle2.x+particle2.radius];
           min_x = Math.min(...possible_x_bounds);
           max_x = Math.max(...possible_x_bounds);
@@ -255,6 +380,9 @@ Particle.prototype.draw = function () {
           particle1.dy += overlap.y;
 
           particle1.targetColor = particle2.targetColor;
+        }
+        else {
+          particle1.justCollided = false;
         }
       }
 
@@ -275,10 +403,11 @@ Particle.prototype.draw = function () {
 			particle1.y = Math.min( Math.max( particle1.y, particle1.radius ), 0 + screenHeight - particle1.radius );
 
       // Color changing
-      particle1.color.r += ( particle1.targetColor.r - particle1.color.r ) * colorChangeSpeed;
-			particle1.color.g += ( particle1.targetColor.g - particle1.color.g ) * colorChangeSpeed;
-			particle1.color.b += ( particle1.targetColor.b - particle1.color.b ) * colorChangeSpeed;
-
+      // if (appearance !== "wave") {
+        particle1.color.r += ( particle1.targetColor.r - particle1.color.r ) * colorChangeSpeed;
+  			particle1.color.g += ( particle1.targetColor.g - particle1.color.g ) * colorChangeSpeed;
+  			particle1.color.b += ( particle1.targetColor.b - particle1.color.b ) * colorChangeSpeed;
+      // }
     }
 
     // speed = 0;
@@ -292,7 +421,7 @@ Particle.prototype.draw = function () {
     // else {
     //   controls.speed = 0;
     // }
-    //
+
     // controls.particles = particles.length;
   }
 
