@@ -1,3 +1,9 @@
+/*
+
+  This used to be the most stable, frills-free js file I had as a backup, like a more presentable version of the "particles-mosaic-geometric.js" file, and with the unnecessary mosaic appearance removed. It's been far superseded by now though, and I would consider it for deletion, since it is so similar to "particles-mosaic-geometric.js".
+
+*/
+
 var c = document.querySelector('canvas'),
     ctx = c.getContext('2d'),
     screenWidth = 0,
@@ -40,22 +46,21 @@ window.requestAnimFrame = (function () {
 })();
 
 function Particle (x, y) {
-  this.x = x;
-  this.y = y;
-  this.dx = (Math.random()*averageSpeed)-(averageSpeed/2);
-  this.dy = (Math.random()*averageSpeed)-(averageSpeed/2);
-  this.color = {
-    r: startingColor.r,
-    g: startingColor.g,
-    b: startingColor.b
-  };
-  this.targetColor = {
-    r: selectedColor.r,
-    g: selectedColor.g,
-    b: selectedColor.b
-  };
-  this.radius = particleRadius;
-  this.justCollided = false;
+    this.x = x;
+    this.y = y;
+    this.dx = (Math.random()*averageSpeed)-(averageSpeed/2);
+    this.dy = (Math.random()*averageSpeed)-(averageSpeed/2);
+    this.color = {
+      r: startingColor.r,
+      g: startingColor.g,
+      b: startingColor.b
+    };
+    this.targetColor = {
+      r: selectedColor.r,
+      g: selectedColor.g,
+      b: selectedColor.b
+    };
+    this.radius = particleRadius;
 }
 
 Particle.prototype.draw = function () {
@@ -103,12 +108,10 @@ Particle.prototype.draw = function () {
     };
     this.particlesAppearance = function () {
       appearance = "particles";
-      c.style.filter = ``;
     };
-    this.mosaicAppearance = function () {
-      appearance = "mosaic";
-      c.style.filter = ``;
-    };
+    this.geometricAppearance = function () {
+      appearance = "geometric";
+    }
 
   // this.speed = 0.5;
   // this.particles = particles.length;
@@ -139,7 +142,7 @@ Particle.prototype.draw = function () {
 
     var appearanceFolder = gui.addFolder("Appearance");
     appearanceFolder.add(controls, "particlesAppearance").name("Particles");
-    appearanceFolder.add(controls, "mosaicAppearance").name("Mosaic");
+    appearanceFolder.add(controls, "geometricAppearance").name("Geometric");
   }
 
   //   var info = gui.addFolder("Info");
@@ -154,8 +157,7 @@ Particle.prototype.draw = function () {
   }
 
   function draw () {
-
-    if ((appearance !== "mosaic") || particles.length === 0) {
+    if (appearance !== "geometric" || particles.length === 0) {
       ctx.save();
       ctx.fillStyle = backgroundColor;
   		ctx.fillRect(0, 0, screenWidth, screenHeight);
@@ -164,14 +166,13 @@ Particle.prototype.draw = function () {
 
     update();
 
-    if (appearance === "mosaic") {
+    if (appearance === "geometric") {
       // voronoi
       voronoi.recycle(diagram);
       diagram = voronoi.compute(particles, fenetre);
   		if (!this.diagram) {return;}
 
       ctx.save();
-
       //cells
       if (diagram.cells.length === 1) {
         var particle = particles[0];
@@ -244,7 +245,6 @@ Particle.prototype.draw = function () {
 
         min_distance = (particle1.radius + particle2.radius);
         if (particle1 !== particle2 && Math.abs(particle2.x - particle1.x) < min_distance && Math.abs(particle2.y - particle1.y) < min_distance) {
-
           possible_x_bounds = [particle1.x-particle1.radius, particle1.x+particle1.radius, particle2.x-particle2.radius, particle2.x+particle2.radius];
           min_x = Math.min(...possible_x_bounds);
           max_x = Math.max(...possible_x_bounds);
@@ -261,9 +261,6 @@ Particle.prototype.draw = function () {
           particle1.dy += overlap.y;
 
           particle1.targetColor = particle2.targetColor;
-        }
-        else {
-          particle1.justCollided = false;
         }
       }
 
@@ -287,6 +284,7 @@ Particle.prototype.draw = function () {
       particle1.color.r += ( particle1.targetColor.r - particle1.color.r ) * colorChangeSpeed;
 			particle1.color.g += ( particle1.targetColor.g - particle1.color.g ) * colorChangeSpeed;
 			particle1.color.b += ( particle1.targetColor.b - particle1.color.b ) * colorChangeSpeed;
+
     }
 
     // speed = 0;
@@ -300,7 +298,7 @@ Particle.prototype.draw = function () {
     // else {
     //   controls.speed = 0;
     // }
-
+    //
     // controls.particles = particles.length;
   }
 
